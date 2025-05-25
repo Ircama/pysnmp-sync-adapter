@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 ###########################################################################
 # pysnmp-sync-adapter
-# Lightweight Synchronous Adapter for PySNMP v1arch AsyncIO HLAPI
+# Lightweight Synchronous Adapter for PySNMP AsyncIO HLAPI
 # https://github.com/Ircama/pysnmp-sync-adapter
 # (C) Ircama 2025 - EUPL-1.2 License
 ###########################################################################

@@ -1,7 +1,7 @@
 [project]
 name = "pysnmp-sync-adapter"
-version = "1.0.1"
-description = "Synchronous wrapper adapters for pysnmp v1arch asyncio HLAPI"
+version = "1.0.2.post1"
+description = "Synchronous wrapper adapters for pysnmp asyncio HLAPI"
 authors = [
     { name="Ircama" }
 ]
