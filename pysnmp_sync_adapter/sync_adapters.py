@@ -40,7 +40,9 @@ def ensure_loop():
         return loop
 
 
-def create_transport(transport_cls, *args, **kwargs):
+def create_transport(
+    transport_cls, *addr, timeout=None, retries=None, **other_kwargs
+):
     """
     Synchronously await the async factory on the given transport class.
 
@@ -49,10 +51,22 @@ def create_transport(transport_cls, *args, **kwargs):
 
     Example for IPv6:
     create_transport(Udp6TransportTarget, ("2001:db8::1", 161), timeout=2)
+
+    Only passes timeout and retries if they are not None.
     """
     loop = ensure_loop()
-    # transport_cls.create is an async factory
-    coro = transport_cls.create(*args, **kwargs)
+
+    # Build the factory kwargs
+    factory_kwargs = {}
+    if timeout is not None:
+        factory_kwargs["timeout"] = timeout
+    if retries is not None:
+        factory_kwargs["retries"] = retries
+    # Merge any extra kwargs
+    factory_kwargs.update(other_kwargs)
+
+    # Call the async factory
+    coro = transport_cls.create(*addr, **factory_kwargs)
     return loop.run_until_complete(coro)
 
 
@@ -103,3 +117,60 @@ def walk_cmd_sync(*args, timeout=None, **kwargs):
 def bulk_walk_cmd_sync(*args, timeout=None, **kwargs):
     """ Sync wrapper for bulk_walk_cmd (async generator). """
     return _sync_agen(bulk_walk_cmd(*args, **kwargs), timeout=timeout)
+
+
+def parallel_get_sync(
+    *args,
+    queries: list,
+    timeout: float = None,
+    max_parallel: int = None,
+    **kwargs
+):
+    """
+    Execute multiple SNMP GET requests in parallel, with PDU packing.
+    
+    Signature:
+        parallel_get_sync(
+            SnmpDispatcher() or SnmpEngine(),
+            authData,
+            transportTarget,
+            [contextData],         # v3arch [with SnmpEngine()];
+                                   # omit for v1arch [with SnmpDispatcher()]
+            queries=[...],         # required keyword-only
+            timeout=5,             # optional function timeout
+            max_parallel=10,       # optional throttle
+            lookupMib=True,        # any extra get_cmd kwargs
+        )
+    
+    - If an element of `queries` is a single ObjectType, it becomes its own PDU.  
+    - If an element is a list/tuple of ObjectType, those are grouped into a single PDU.  
+    - All PDUs fire concurrently via asyncio.gather().  
+    - Returns a list of `(errInd, errStat, errIdx, varBinds)` in the same order as `queries`.
+    """
+    loop = ensure_loop()
+    sem = asyncio.Semaphore(max_parallel) if max_parallel else None
+
+    # wrap each query in a coroutine that acquires a semaphore before
+    # calling get_cmd, then releases it
+    async def _throttled_get(coro_fn):
+        if sem:
+            async with sem:
+                return await coro_fn()
+        else:
+            return await coro_fn()
+
+    # build throttled coroutines per query or per grouped sub-list
+    coros = []
+    for q in queries:
+        if isinstance(q, (list, tuple)):
+            fn = lambda q=q: get_cmd(*args, *q, **kwargs)
+        else:
+            fn = lambda q=q: get_cmd(*args, q, **kwargs)
+        coros.append(_throttled_get(fn))
+
+    # Gather all in parallel
+    async def _gather_all():
+        return await asyncio.gather(*coros)
+
+    # Run synchronously with optional timeout and max_parallel
+    return _sync_coro(_gather_all(), timeout=timeout)
