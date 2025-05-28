@@ -3,6 +3,8 @@ import sys
 import asyncio
 import functools
 import importlib
+from typing import Sequence, List, Any, Union
+
 
 # Determine desired architecture:
 # - honor PYSNMP_ARCH if set to 'v1arch' or 'v3arch',
@@ -174,3 +176,35 @@ def parallel_get_sync(
 
     # Run synchronously with optional timeout and max_parallel
     return _sync_coro(_gather_all(), timeout=timeout)
+
+
+def chunk_queries(queries, max_per_pdu):
+    """
+    Normalize-and-split queries into flat chunks of <= max_per_pdu var-binds.
+
+    :param queries:     a sequence where each element is either
+                         - an ObjectType, or
+                         - a list/tuple of ObjectType
+    :param max_per_pdu: max number of var-binds per PDU
+    :return:            List of flat [ObjectType, ...] chunks
+    """
+    if max_per_pdu < 1:
+        raise ValueError("max_per_pdu must be >= 1")
+
+    # flatten any nested singleton lists/tuples
+    flat = []
+    for q in queries:
+        if isinstance(q, (list, tuple)):
+            flat.extend(q)
+        else:
+            flat.append(q)
+
+    # chunk the flat list
+    chunks = []
+    for oid in flat:
+        if not chunks or len(chunks[-1]) >= max_per_pdu:
+            chunks.append([oid])
+        else:
+            chunks[-1].append(oid)
+
+    return chunks
