@@ -178,7 +178,7 @@ def parallel_get_sync(
     return _sync_coro(_gather_all(), timeout=timeout)
 
 
-def chunk_queries(queries, max_per_pdu):
+def cluster_varbinds(queries, max_per_pdu):
     """
     Normalize-and-split queries into flat chunks of <= max_per_pdu var-binds.
 

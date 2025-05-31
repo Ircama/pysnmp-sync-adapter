@@ -18,6 +18,7 @@ from pysnmp_sync_adapter import (
 )
 from pysnmp.proto.errind import RequestTimedOut
 import pysnmp.hlapi.v3arch.asyncio.cmdgen as _hlapi_cmdgen
+from pyasn1.type.univ import ObjectIdentifier as PyAsn1ObjectIdentifier
 
 
 class UdpTransportTarget(_BaseUdpTransportTarget):
@@ -72,14 +73,23 @@ class Udp6TransportTarget(_BaseUdp6TransportTarget):
 
 def _prepare_args(snmp_args):
     """
-    Wrap raw OID tuples into ObjectType(ObjectIdentity).
+    Wrap raw OID tuples or pyasn1 ObjectIdentifier into ObjectType(ObjectIdentity).
     """
     new_args = []
     for arg in snmp_args:
+        # pure tuple of ints
         if isinstance(arg, tuple) and all(isinstance(x, int) for x in arg):
             new_args.append(ObjectType(ObjectIdentity(arg)))
+
+        # pyasn1 ObjectIdentifier
+        elif isinstance(arg, PyAsn1ObjectIdentifier):
+            # str(arg)
+            new_args.append(ObjectType(ObjectIdentity(str(arg))))
+
+        # everything else (already an ObjectType or something else)
         else:
             new_args.append(arg)
+
     return new_args
 
 

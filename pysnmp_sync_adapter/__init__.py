@@ -7,5 +7,5 @@ from .sync_adapters import (
     bulk_walk_cmd_sync,
     create_transport,
     parallel_get_sync,
-    chunk_queries
+    cluster_varbinds
 )
