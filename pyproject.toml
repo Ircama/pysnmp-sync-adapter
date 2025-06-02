@@ -1,6 +1,6 @@
 [project]
 name = "pysnmp-sync-adapter"
-version = "1.0.5.post3"
+version = "1.0.6"
 description = "Synchronous wrapper adapters for pysnmp asyncio HLAPI"
 authors = [
     { name="Ircama" }
@@ -9,7 +9,7 @@ license = "EUPL-1.2"
 readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
-    "pysnmp>=5.0.0"
+    "pysnmp>=7.0.0"
 ]
 
 [project.urls]
