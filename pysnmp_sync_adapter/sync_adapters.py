@@ -34,6 +34,19 @@ bulk_walk_cmd = _mod.bulk_walk_cmd
 
 # Event loop & transport helpers
 def ensure_loop():
+    """
+    Return a usable asyncio event loop, creating one if necessary.
+
+    Since Python 3.12, asyncio.get_event_loop() raises RuntimeError when no
+    event loop is set in the current thread; pysnmp's SnmpDispatcher() and
+    SnmpEngine() require an existing event loop. Call this function before
+    creating a dispatcher/engine (Python < 3.12 keeps working unchanged).
+    """
+    try:
+        # Already inside a running coroutine/task
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        pass
     try:
         return asyncio.get_event_loop()
     except RuntimeError:

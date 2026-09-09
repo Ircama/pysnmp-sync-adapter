@@ -20,6 +20,19 @@ from pysnmp.proto.errind import RequestTimedOut
 import pysnmp.hlapi.v3arch.asyncio.cmdgen as _hlapi_cmdgen
 from pyasn1.type.univ import ObjectIdentifier as PyAsn1ObjectIdentifier
 
+from .sync_adapters import ensure_loop
+
+
+def _ensure_engine():
+    """
+    Create a SnmpEngine, ensuring an event loop exists first.
+
+    Required on Python >= 3.12, where asyncio.get_event_loop() no longer
+    creates an implicit event loop and pysnmp's SnmpEngine() fails without one.
+    """
+    ensure_loop()
+    return SnmpEngine()
+
 
 class UdpTransportTarget(_BaseUdpTransportTarget):
     """
@@ -98,7 +111,8 @@ def _wrap_sync_result(sync_func, *snmp_args, **snmp_kwargs):
     args = list(snmp_args)
     # first: CommunityData or UsmUserData -> need SnmpEngine
     if args and isinstance(args[0], (CommunityData, UsmUserData)):
-        args.insert(0, SnmpEngine())
+        # Python >= 3.12: an event loop must exist before SnmpEngine()
+        args.insert(0, _ensure_engine())
     # next: transport -> need ContextData
     # find first transport instance
     for idx, a in enumerate(args):

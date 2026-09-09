@@ -12,14 +12,17 @@ from pysnmp.hlapi.v1arch.asyncio import *
 
 from pysnmp_sync_adapter import (
     get_cmd_sync, next_cmd_sync, set_cmd_sync, bulk_cmd_sync,
-    walk_cmd_sync, bulk_walk_cmd_sync, create_transport
+    walk_cmd_sync, bulk_walk_cmd_sync, create_transport, ensure_loop,
+    create_dispatcher
 )
 
-if platform.system()=='Windows':
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+# asyncio.WindowsSelectorEventLoopPolicy is deprecated since Python 3.14
+# (removal in 3.16); the default policy is fine now that ensure_loop()
+# creates an event loop when none exists.
 
 community = 'public'
-dispatcher = SnmpDispatcher()
+# Python >= 3.12: an event loop must exist before creating the dispatcher
+dispatcher = create_dispatcher(SnmpDispatcher)
 auth_data = CommunityData(community, mpModel=0)
 
 
