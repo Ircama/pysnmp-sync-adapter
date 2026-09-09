@@ -7,7 +7,7 @@
 
 ---
 
-This package provides lightweight, blocking wrappers around the `pysnmp.hlapi.v1arch.asyncio` and `pysnmp.hlapi.v3arch.asyncio` modules of PySNMP, enabling synchronous use of the SNMP high-level API in PySNMP v7+ without requiring direct `asyncio` management. It preserves the flexibility of PySNMP’s asyncio-based architecture and includes a compatibility layer for various legacy interfaces. The two additional functions `parallel_get_sync` and `cluster_varbinds` enable efficient, high-performance concurrent SNMP queries in a blocking context.
+This package provides lightweight, blocking wrappers around the `pysnmp.hlapi.v1arch.asyncio` and `pysnmp.hlapi.v3arch.asyncio` modules of [PySNMP](https://github.com/lextudio/pysnmp), enabling synchronous use of the SNMP high-level API in PySNMP v7+ without requiring direct `asyncio` management. It preserves the flexibility of PySNMP’s asyncio-based architecture and includes a compatibility layer for various legacy interfaces. The two additional functions `parallel_get_sync` and `cluster_varbinds` enable efficient, high-performance concurrent SNMP queries in a blocking context.
 
 ## Features
 
