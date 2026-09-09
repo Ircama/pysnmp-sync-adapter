@@ -10,10 +10,6 @@ import re
 import os
 import sys
 
-import json
-from urllib import request
-from pkg_resources import parse_version
-
 ###########################################################################
 
 END_OF_INTRODUCTION = '## Quick Start'
@@ -28,15 +24,6 @@ PACKAGE_NAME = "pysnmp-sync-adapter"
 VERSIONFILE = "pysnmp_sync_adapter/__version__.py"
 
 ###########################################################################
-
-def versions(pkg_name, site):
-    url = 'https://' + site + '.python.org/pypi/' + pkg_name + '/json'
-    try:
-        releases = json.loads(request.urlopen(url).read())['releases']
-    except Exception as e:
-        print("Error while getting data from URL '" + url + "': " + e)
-        return []
-    return sorted(releases, key=parse_version, reverse=True)
 
 with open("README.md", "r") as readme:
     long_description = readme.read()
