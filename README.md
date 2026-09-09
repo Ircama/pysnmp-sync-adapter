@@ -174,7 +174,8 @@ from pysnmp.hlapi.v3arch.asyncio import (
 from pysnmp_sync_adapter import create_transport, parallel_get_sync, create_dispatcher
 
 engine    = create_dispatcher(SnmpEngine)
-auth      = UsmUserData("usr", authKey=b"abc", privKey=b"xyz", mpModel=3)
+# Credentials for the public demo agent; auth keys must be >= 8 characters
+auth      = UsmUserData("usr-md5-none", authKey=b"authkey1")
 context   = ContextData()
 transport = create_transport(UdpTransportTarget, ("demo.pysnmp.com", 161), timeout=2)
 
@@ -202,6 +203,16 @@ Depending on the use case, the performance improvement can be significant.
 Example of usage:
 
 ```python
+from pysnmp.hlapi.v1arch.asyncio import ObjectType, ObjectIdentity
+from pysnmp_sync_adapter import (
+    cluster_varbinds, parallel_get_sync, create_transport, create_dispatcher
+)
+from pysnmp.hlapi.v1arch.asyncio import SnmpDispatcher, CommunityData, UdpTransportTarget
+
+engine    = create_dispatcher(SnmpDispatcher)
+auth      = CommunityData("public", mpModel=0)
+transport = create_transport(UdpTransportTarget, ("demo.pysnmp.com", 161), timeout=2)
+
 raw_queries = [
     ObjectType(ObjectIdentity('1.3.6.1.2.1.1.1.0')),
     [
@@ -211,18 +222,14 @@ raw_queries = [
     ObjectType(ObjectIdentity('1.3.6.1.2.1.1.4.0'))
 ]
 
-wrapped_queries = [
-    [ ObjectType(ObjectIdentity(x)) for x in group ]
-    for group in raw_queries
-]
-
-wrapped_queries = cluster_varbinds(wrapped_queries, max_per_pdu=10)  # this can get relevant performance improvement
+# Normalize (flatten) and chunk into PDUs of max 2 var-binds each:
+pdus = cluster_varbinds(raw_queries, max_per_pdu=2)  # this can get relevant performance improvement
 
 raw_results = parallel_get_sync(
     engine,
     auth,
     transport,
-    queries=wrapped_queries,
+    queries=pdus,
     max_parallel=5
 )
 ```
@@ -234,7 +241,7 @@ def cluster_varbinds(
     queries: Sequence[Union[ObjectType, Sequence[ObjectType]]],
     max_per_pdu: int
 ) -> List[List[ObjectType]]:
-````
+```
 
 **Parameters:**
 
@@ -250,7 +257,8 @@ def cluster_varbinds(
 Usage:
 
 ```python
-from pysnmp.hlapi import ObjectType, ObjectIdentity
+from pysnmp.hlapi.v1arch.asyncio import ObjectType, ObjectIdentity
+from pysnmp_sync_adapter import cluster_varbinds
 
 # Prepare a mixed sequence of queries
 raw_queries = [
@@ -277,18 +285,24 @@ pdus = cluster_varbinds(raw_queries, max_per_pdu=2)
 ```python
 def create_transport(
     transport_cls, *addr, timeout=None, retries=None, **other_kwargs
-)
+):
 ```
 
 Example for IPv4:
 
 ```python
+from pysnmp_sync_adapter import create_transport
+from pysnmp.hlapi.v1arch.asyncio import UdpTransportTarget
+
 create_transport(UdpTransportTarget, ("demo.pysnmp.com", 161), timeout=2)
 ```
 
 Example for IPv6:
 
 ```python
+from pysnmp_sync_adapter import create_transport
+from pysnmp.hlapi.v1arch.asyncio import Udp6TransportTarget
+
 create_transport(Udp6TransportTarget, ("2001:db8::1", 161), timeout=2)
 ```
 
@@ -346,6 +360,8 @@ This method is particularly useful in larger applications or testing scenarios w
 **Note:** When both `"v1arch"` and `"v3arch"` modules need to be used sequentially in the same program (unusual technique), it has been verified that purging the relevant modules before re-importing them should offer correct behavior:
 
 ```python
+import sys
+
 for mod in list(sys.modules):
     if mod.startswith("pysnmp.hlapi.") or mod.startswith("pysnmp_sync_adapter"):
         del sys.modules[mod]
@@ -576,9 +592,10 @@ This library uses `SnmpEngine()` and `ContextData()`. It requires `legacy_wrappe
 ```python
 from pysnmp.hlapi.v3arch.asyncio import *
 from pysnmp_sync_adapter.legacy_wrappers import UdpTransportTarget, getCmd
+from pysnmp_sync_adapter import create_dispatcher
 
 for errorIndication, errorStatus, errorIndex, varBinds in getCmd(
-    SnmpEngine(),
+    create_dispatcher(SnmpEngine),
     CommunityData('public', mpModel=0),
     UdpTransportTarget(("demo.pysnmp.com", 161)),
     ContextData(),
@@ -605,11 +622,12 @@ This library uses `SnmpDispatcher()` and does not use `ContextData()`. It requir
 from pysnmp.hlapi.v1arch.asyncio import *
 from pyasn1.type.univ import OctetString as OctetStringType
 from pysnmp_sync_adapter.legacy_wrappers import UdpTransportTarget, getCmd
+from pysnmp_sync_adapter import create_dispatcher
 
 timeout = 2
 retries = 2
 iterator = getCmd(
-    SnmpDispatcher(),
+    create_dispatcher(SnmpDispatcher),
     CommunityData('public', mpModel=0),
     UdpTransportTarget(
         ("demo.pysnmp.com", 161),
